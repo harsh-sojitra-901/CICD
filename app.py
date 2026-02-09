@@ -21,7 +21,6 @@ HTML_PAGE = """
             margin: 0;
         }
 
-        /* NAVBAR */
         nav {
             background: #0f2027;
             padding: 15px 40px;
@@ -52,7 +51,6 @@ HTML_PAGE = """
             font-weight: bold;
         }
 
-        /* HERO */
         header {
             background: linear-gradient(120deg, #203a43, #2c5364);
             color: white;
@@ -60,11 +58,6 @@ HTML_PAGE = """
             text-align: center;
         }
 
-        header h1 {
-            font-size: 2.8rem;
-        }
-
-        /* GALLERY */
         .container {
             padding: 40px;
         }
@@ -88,20 +81,31 @@ HTML_PAGE = """
             object-fit: cover;
         }
 
-        .card .info {
-            padding: 15px;
+        .info {
+            padding: 12px;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            gap: 5px;
         }
 
         .download {
             background: #2c5364;
             color: white;
-            padding: 8px 12px;
+            padding: 6px 10px;
             border-radius: 6px;
             text-decoration: none;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
+        }
+
+        .delete {
+            background: #e63946;
+            color: white;
+            padding: 6px 10px;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            font-size: 0.85rem;
         }
 
         footer {
@@ -128,7 +132,7 @@ HTML_PAGE = """
 
 <header>
     <h1>Premium Stock Images</h1>
-    <p>Upload, download & use images for your creative projects</p>
+    <p>Upload, download & manage your image assets</p>
 </header>
 
 <div class="container">
@@ -137,8 +141,11 @@ HTML_PAGE = """
         <div class="card">
             <img src="/uploads/{{ image }}">
             <div class="info">
-                <span>{{ image }}</span>
                 <a class="download" href="/download/{{ image }}">Download</a>
+
+                <form action="/delete/{{ image }}" method="post">
+                    <button class="delete">Remove</button>
+                </form>
             </div>
         </div>
         {% endfor %}
@@ -163,6 +170,13 @@ def upload():
     file = request.files["image"]
     if file:
         file.save(os.path.join(app.config["UPLOAD_FOLDER"], file.filename))
+    return redirect(url_for("home"))
+
+@app.route("/delete/<filename>", methods=["POST"])
+def delete(filename):
+    file_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
+    if os.path.exists(file_path):
+        os.remove(file_path)
     return redirect(url_for("home"))
 
 @app.route("/download/<filename>")
