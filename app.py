@@ -1,87 +1,72 @@
-from flask import Flask, render_template_string
+import os
+from flask import Flask, render_template_string, request, redirect, url_for, send_from_directory
 
 app = Flask(__name__)
 
+UPLOAD_FOLDER = "uploads"
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
+
 HTML_PAGE = """
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <title>Stockify | Premium Stock Images</title>
+    <title>Pixora | Premium Stock Images</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
     <style>
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
         body {
             font-family: "Segoe UI", Arial, sans-serif;
-            background-color: #f5f7fa;
-            color: #333;
+            background: #f4f6f9;
+            margin: 0;
         }
 
-        /* ---------- HEADER ---------- */
-        header {
-            background: linear-gradient(120deg, #0f2027, #203a43, #2c5364);
+        /* NAVBAR */
+        nav {
+            background: #0f2027;
+            padding: 15px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             color: white;
-            padding: 70px 20px;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+
+        .brand img {
+            height: 40px;
+        }
+
+        .upload-btn {
+            background: #00c6ff;
+            border: none;
+            padding: 10px 18px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        /* HERO */
+        header {
+            background: linear-gradient(120deg, #203a43, #2c5364);
+            color: white;
+            padding: 60px 20px;
             text-align: center;
         }
 
         header h1 {
-            font-size: 3rem;
-            margin-bottom: 10px;
+            font-size: 2.8rem;
         }
 
-        header p {
-            font-size: 1.2rem;
-            opacity: 0.9;
-        }
-
-        .search-box {
-            margin-top: 30px;
-        }
-
-        .search-box input {
-            width: 60%;
-            max-width: 500px;
-            padding: 14px;
-            border-radius: 30px;
-            border: none;
-            outline: none;
-            font-size: 1rem;
-        }
-
-        /* ---------- CATEGORIES ---------- */
-        .categories {
-            display: flex;
-            justify-content: center;
-            gap: 15px;
-            padding: 30px 10px;
-            flex-wrap: wrap;
-        }
-
-        .category {
-            background: white;
-            padding: 10px 20px;
-            border-radius: 20px;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-            cursor: pointer;
-            transition: 0.3s;
-            font-weight: 500;
-        }
-
-        .category:hover {
-            background: #2c5364;
-            color: white;
-        }
-
-        /* ---------- GALLERY ---------- */
+        /* GALLERY */
         .container {
-            padding: 20px 40px 60px;
+            padding: 40px;
         }
 
         .gallery {
@@ -91,143 +76,77 @@ HTML_PAGE = """
         }
 
         .card {
-            position: relative;
+            background: white;
             border-radius: 12px;
             overflow: hidden;
-            box-shadow: 0 8px 20px rgba(0,0,0,0.15);
-            transition: transform 0.3s;
-        }
-
-        .card:hover {
-            transform: translateY(-8px);
+            box-shadow: 0 6px 15px rgba(0,0,0,0.15);
         }
 
         .card img {
             width: 100%;
-            height: 230px;
+            height: 220px;
             object-fit: cover;
         }
 
-        .overlay {
-            position: absolute;
-            inset: 0;
-            background: rgba(0,0,0,0.45);
-            opacity: 0;
-            transition: 0.3s;
-            display: flex;
-            flex-direction: column;
-            justify-content: flex-end;
+        .card .info {
             padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .download {
+            background: #2c5364;
             color: white;
-        }
-
-        .card:hover .overlay {
-            opacity: 1;
-        }
-
-        .overlay h3 {
-            margin-bottom: 10px;
-        }
-
-        .overlay button {
-            padding: 10px;
-            border: none;
+            padding: 8px 12px;
             border-radius: 6px;
-            background: #00c6ff;
-            color: black;
-            font-weight: bold;
-            cursor: pointer;
+            text-decoration: none;
+            font-size: 0.9rem;
         }
 
-        .overlay button:hover {
-            background: #00a3cc;
-        }
-
-        /* ---------- FOOTER ---------- */
         footer {
             background: #0f2027;
             color: white;
             text-align: center;
-            padding: 20px;
-            font-size: 0.9rem;
+            padding: 15px;
         }
     </style>
 </head>
 <body>
 
-<header>
-    <h1>📸 Stockify</h1>
-    <p>Premium stock images for designers, developers & creators</p>
-
-    <div class="search-box">
-        <input type="text" placeholder="Search images, categories, keywords...">
+<nav>
+    <div class="brand">
+        <img src="/static/logo.png">
+        Pixora
     </div>
-</header>
 
-<div class="categories">
-    <div class="category">Nature</div>
-    <div class="category">Business</div>
-    <div class="category">Technology</div>
-    <div class="category">People</div>
-    <div class="category">Travel</div>
-</div>
+    <form action="/upload" method="post" enctype="multipart/form-data">
+        <input type="file" name="image" required>
+        <button class="upload-btn">Upload Image</button>
+    </form>
+</nav>
+
+<header>
+    <h1>Premium Stock Images</h1>
+    <p>Upload, download & use images for your creative projects</p>
+</header>
 
 <div class="container">
     <div class="gallery">
-
+        {% for image in images %}
         <div class="card">
-            <img src="https://picsum.photos/id/1018/600/400">
-            <div class="overlay">
-                <h3>Mountain View</h3>
-                <button>Download</button>
+            <img src="/uploads/{{ image }}">
+            <div class="info">
+                <span>{{ image }}</span>
+                <a class="download" href="/download/{{ image }}">Download</a>
             </div>
         </div>
-
-        <div class="card">
-            <img src="https://picsum.photos/id/1024/600/400">
-            <div class="overlay">
-                <h3>Wildlife</h3>
-                <button>Download</button>
-            </div>
-        </div>
-
-        <div class="card">
-            <img src="https://picsum.photos/id/1031/600/400">
-            <div class="overlay">
-                <h3>City Life</h3>
-                <button>Download</button>
-            </div>
-        </div>
-
-        <div class="card">
-            <img src="https://picsum.photos/id/1043/600/400">
-            <div class="overlay">
-                <h3>Nature Waterfall</h3>
-                <button>Download</button>
-            </div>
-        </div>
-
-        <div class="card">
-            <img src="https://picsum.photos/id/1050/600/400">
-            <div class="overlay">
-                <h3>Beach Travel</h3>
-                <button>Download</button>
-            </div>
-        </div>
-
-        <div class="card">
-            <img src="https://picsum.photos/id/1060/600/400">
-            <div class="overlay">
-                <h3>Technology Workspace</h3>
-                <button>Download</button>
-            </div>
-        </div>
-
+        {% endfor %}
     </div>
 </div>
 
 <footer>
-    © 2026 Stockify | Professional CI/CD Demo Application
+    © 2026 Pixora | CI/CD Demo Stock Image Platform
 </footer>
 
 </body>
@@ -236,7 +155,23 @@ HTML_PAGE = """
 
 @app.route("/")
 def home():
-    return render_template_string(HTML_PAGE)
+    images = os.listdir(app.config["UPLOAD_FOLDER"])
+    return render_template_string(HTML_PAGE, images=images)
+
+@app.route("/upload", methods=["POST"])
+def upload():
+    file = request.files["image"]
+    if file:
+        file.save(os.path.join(app.config["UPLOAD_FOLDER"], file.filename))
+    return redirect(url_for("home"))
+
+@app.route("/download/<filename>")
+def download(filename):
+    return send_from_directory(app.config["UPLOAD_FOLDER"], filename, as_attachment=True)
+
+@app.route("/uploads/<filename>")
+def uploaded_file(filename):
+    return send_from_directory(app.config["UPLOAD_FOLDER"], filename)
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
